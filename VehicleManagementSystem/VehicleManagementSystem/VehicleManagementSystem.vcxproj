@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -21,7 +21,7 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{1d038815-5d53-4d15-a85f-5aef18705273}</ProjectGuid>
+    <ProjectGuid>{4c883aa2-15f1-457e-b23e-ba3ebfd2d5b6}</ProjectGuid>
     <RootNamespace>VehicleManagementSystem</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
@@ -120,6 +120,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <ScanSourceForModuleDependencies>true</ScanSourceForModuleDependencies>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -130,21 +132,17 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Car.cpp" />
-    <ClCompile Include="Engine.cppm" />
-    <ClCompile Include="GasEngine.cppm" />
-    <ClCompile Include="Motorcycle.cpp" />
-    <ClCompile Include="Motorcycle.ixx" />
-    <ClCompile Include="Notes.cpp" />
+    <ClCompile Include="Car.ixx" />
+    <ClCompile Include="Engine.ixx" />
+    <ClCompile Include="GPSSystem.ixx" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="Engine.cpp" />
-    <ClCompile Include="GasEngine.cpp" />
     <ClCompile Include="Truck.cpp" />
     <ClCompile Include="Truck.ixx" />
+    <ClCompile Include="Motorcycle.cpp" />
+    <ClCompile Include="Motorcycle.ixx" />
     <ClCompile Include="Vehicle.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="Car.cppm" />
-    <ClInclude Include="Vehicle.cppm" />
+    <ClCompile Include="Vehicle.ixx" />
+    <ClCompile Include="Wheels.ixx" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
