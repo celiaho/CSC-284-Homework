@@ -19,3 +19,7 @@ QUESTIONS
 
 3. How would you modify the design to support new vehicle types without major code changes?
 	Current design allows for new derived classes (e.g. "ElectricCar" or "Plane") to be added along with any unique attributes they have. If new vehicle types are based on fuel type (e.g. "ElectricCar" or "ElectricTruck" or "HybridCar"), it may be redundant to have fuelType as an Engine attribute.
+
+
+MY QUESTIONS FOR PROFESSOR
+1. Why does using setPrecision to format MaxPayloadInPounds in the Truck.cpp file cause an error? Error details in code comments.
