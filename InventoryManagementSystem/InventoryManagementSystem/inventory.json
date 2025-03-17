@@ -1,0 +1,28 @@
+{
+    "inventory": [
+        {
+            "name": "Laptop",
+            "category": "Electronics",
+            "quantity": 10,
+            "price": 1200.50
+        },
+        {
+            "name": "Headphones",
+            "category": "Electronics",
+            "quantity": 25,
+            "price": 150.75
+        },
+        {
+            "name": "Desk Chair",
+            "category": "Furniture",
+            "quantity": 15,
+            "price": 85.00
+        },
+        {
+            "name": "Notebook",
+            "category": "Stationery",
+            "quantity": 100,
+            "price": 2.50
+        }
+    ]
+}
