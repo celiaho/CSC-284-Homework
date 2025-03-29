@@ -1,5 +1,4 @@
 // Specification file - declarations (classes, mbr vars, fn prototypes)
-
 export module Vehicle;
 
 import Engine;
