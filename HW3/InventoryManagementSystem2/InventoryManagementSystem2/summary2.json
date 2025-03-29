@@ -1,0 +1,21 @@
+{
+    "category_summary": {
+        "Electronics": {
+            "total_items": 35,
+            "total_value": 15773.75
+        },
+        "Furniture": {
+            "total_items": 15,
+            "total_value": 1275.0
+        },
+        "Stationery": {
+            "total_items": 100,
+            "total_value": 250.0
+        }
+    },
+    "most_expensive_product": {
+        "name": "Laptop",
+        "price": 1200.5
+    },
+    "total_stock_value": 17298.75
+}
