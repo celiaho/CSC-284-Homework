@@ -1,0 +1,384 @@
+Welcome to Post Manager!
+What would you like to do?
+        1. Read a Post
+        2. Add a new Post
+        3. Update a Post
+        4. Delete a Post
+        5. Exit
+
+> Enter a number for your choice: 2
+> Enter an ID for the Post you want to add: 45345
+> Enter Post title:             -Kuya's Cooking-
+> Enter Post body: Lechon, Adobo, Garlic Rice, Menudo, Lumpia
+> Enter your user ID: tamondong1
+> ERROR: Invalid input. Enter an integer: 2342
+Creating Post ID 45345 with your input...
+INFO: Status Code 201 - Post ID 45345 created successfully:
+{
+  "title": "            -Kuya's Cooking-",
+  "body": "Lechon, Adobo, Garlic Rice, Menudo, Lumpia",
+  "userId": "2342",
+  "id": 101
+}
+
+What would you like to do?
+        1. Read a Post
+        2. Add a new Post
+        3. Update a Post
+        4. Delete a Post
+        5. Exit
+
+> Enter a number for your choice: 1
+> Enter the ID for the Post you want to read: 45345
+Fetching Post ID 45345...
+> ERROR: Status Code 404 - Post ID 45345 not found. Please try again: What would you like to do?
+        1. Read a Post
+        2. Add a new Post
+        3. Update a Post
+        4. Delete a Post
+        5. Exit
+
+> Enter a number for your choice: 2342
+> ERROR: Invalid choice. Enter a number between 1 and 5: 2
+> Enter an ID for the Post you want to add: 2342
+> Enter Post title: Aldrin
+> Enter Post body: Agas
+> Enter your user ID: 4324234
+Creating Post ID 2342 with your input...
+INFO: Status Code 201 - Post ID 2342 created successfully:
+{
+  "title": "Aldrin",
+  "body": "Agas",
+  "userId": "4324234",
+  "id": 101
+}
+
+What would you like to do?
+        1. Read a Post
+        2. Add a new Post
+        3. Update a Post
+        4. Delete a Post
+        5. Exit
+
+> Enter a number for your choice: 1
+> Enter the ID for the Post you want to read: 2342
+Fetching Post ID 2342...
+> ERROR: Status Code 404 - Post ID 2342 not found. Please try again: What would you like to do?
+        1. Read a Post
+        2. Add a new Post
+        3. Update a Post
+        4. Delete a Post
+        5. Exit
+
+> Enter a number for your choice: 3
+> Enter the ID of the Post you want to update: 2342
+> ERROR: Status Code 404 - Cannot update Post ID 2342 because it does not exist. Enter a Post ID that exists: 45345
+> ERROR: Status Code 404 - Cannot update Post ID 45345 because it does not exist. Enter a Post ID that exists:
+
+
+
+
+1
+> Would you like to view the existing post before you update? Enter "y" for "Yes" or "n" for "No": y
+Here is the existing Post:
+INFO: Status Code 200 - Post ID 1 fetched successfully:
+{
+  "userId": 1,
+  "id": 1,
+  "title": "sunt aut facere repellat provident occaecati excepturi optio reprehenderit",
+  "body": "quia et suscipit\nsuscipit recusandae consequuntur expedita et cum\nreprehenderit molestiae ut ut quas totam\nnostrum rerum est autem sunt rem eveniet architecto"
+}
+
+> Enter new Post title: Cogito Ergo Sum
+> Enter new Post body: Veni Vidi Vici
+> Enter your user ID: 69
+Updating Post ID 1 with your input...
+INFO: Status Code 200 - Post ID 1 updated successfully:
+{
+  "title": "Cogito Ergo Sum",
+  "body": "Veni Vidi Vici",
+  "userId": "69",
+  "id": 1
+}
+
+What would you like to do?
+        1. Read a Post
+        2. Add a new Post
+        3. Update a Post
+        4. Delete a Post
+        5. Exit
+
+> Enter a number for your choice: 2
+> Enter an ID for the Post you want to add: 69
+> ERROR: Status Code 200 - Cannot create Post ID 69 because it already exists. Enter a Post ID that doesn't already exist: 99
+> ERROR: Status Code 200 - Cannot create Post ID 99 because it already exists. Enter a Post ID that doesn't already exist: 23
+> ERROR: Status Code 200 - Cannot create Post ID 23 because it already exists. Enter a Post ID that doesn't already exist: 45
+> ERROR: Status Code 200 - Cannot create Post ID 45 because it already exists. Enter a Post ID that doesn't already exist: 034335
+> Enter Post title: I love sex
+> Enter Post body: Vagina Penis Goes In
+> Enter your user ID: Vulva
+> ERROR: Invalid input. Enter an integer: 420
+Creating Post ID 34335 with your input...
+INFO: Status Code 201 - Post ID 34335 created successfully:
+{
+  "title": "I love sex",
+  "body": "Vagina Penis Goes In",
+  "userId": "420",
+  "id": 101
+}
+
+What would you like to do?
+        1. Read a Post
+        2. Add a new Post
+        3. Update a Post
+        4. Delete a Post
+        5. Exit
+
+> Enter a number for your choice: 1
+> Enter the ID for the Post you want to read: 69
+Fetching Post ID 69...
+INFO: Status Code 200 - Post ID 69 fetched successfully:
+{
+  "userId": 7,
+  "id": 69,
+  "title": "fugiat quod pariatur odit minima",
+  "body": "officiis error culpa consequatur modi asperiores et\ndolorum assumenda voluptas et vel qui aut vel rerum\nvoluptatum quisquam perspiciatis quia rerum consequatur totam quas\nsequi commodi repudiandae asperiores et saepe a"
+}
+
+What would you like to do?
+        1. Read a Post
+        2. Add a new Post
+        3. Update a Post
+        4. Delete a Post
+        5. Exit
+
+> Enter a number for your choice: 1
+> Enter the ID for the Post you want to read: 99
+Fetching Post ID 99...
+INFO: Status Code 200 - Post ID 99 fetched successfully:
+{
+  "userId": 10,
+  "id": 99,
+  "title": "temporibus sit alias delectus eligendi possimus magni",
+  "body": "quo deleniti praesentium dicta non quod\naut est molestias\nmolestias et officia quis nihil\nitaque dolorem quia"
+}
+
+What would you like to do?
+        1. Read a Post
+        2. Add a new Post
+        3. Update a Post
+        4. Delete a Post
+        5. Exit
+
+> Enter a number for your choice: 1
+> Enter the ID for the Post you want to read: 420
+Fetching Post ID 420...
+> ERROR: Status Code 404 - Post ID 420 not found. Please tryagain: What would you like to do?
+        1. Read a Post
+        2. Add a new Post
+        3. Update a Post
+        4. Delete a Post
+        5. Exit
+
+> Enter a number for your choice: 14
+> ERROR: Invalid choice. Enter a number between 1 and 5: 1
+> Enter the ID for the Post you want to read: 101
+Fetching Post ID 101...
+> ERROR: Status Code 404 - Post ID 101 not found. Please tryagain: What would you like to do?
+        1. Read a Post
+        2. Add a new Post
+        3. Update a Post
+        4. Delete a Post
+        5. Exit
+
+> Enter a number for your choice: 1
+> Enter the ID for the Post you want to read: 100
+Fetching Post ID 100...
+INFO: Status Code 200 - Post ID 100 fetched successfully:
+{
+  "userId": 10,
+  "id": 100,
+  "title": "at nam consequatur ea labore ea harum",
+  "body": "cupiditate quo est a modi nesciunt soluta\nipsa voluptas error itaque dicta in\nautem qui minus magnam et distinctio eum\naccusamus ratione error aut"
+}
+
+What would you like to do?
+        1. Read a Post
+        2. Add a new Post
+        3. Update a Post
+        4. Delete a Post
+        5. Exit
+
+> Enter a number for your choice: 1
+> Enter the ID for the Post you want to read: 102
+Fetching Post ID 102...
+> ERROR: Status Code 404 - Post ID 102 not found. Please tryagain: What would you like to do?
+        1. Read a Post
+        2. Add a new Post
+        3. Update a Post
+        4. Delete a Post
+        5. Exit
+
+> Enter a number for your choice: 4
+Enter the ID of the Post you want to delete: 69
+Deleting Post ID 69...
+INFO: Status Code 200 - Post deleted successfully.
+What would you like to do?
+        1. Read a Post
+        2. Add a new Post
+        3. Update a Post
+        4. Delete a Post
+        5. Exit
+
+> Enter a number for your choice: 2
+> Enter an ID for the Post you want to add: 69
+> ERROR: Status Code 200 - Cannot create Post ID 69 because it already exists. Enter a Post ID that doesn't already exist: 102
+> Enter Post title: Burger Finger
+> Enter Post body: She loves a burger finger
+> Enter your user ID: 69
+Creating Post ID 102 with your input...
+INFO: Status Code 201 - Post ID 102 created successfully:
+{
+  "title": "Burger Finger",
+  "body": "She loves a burger finger",
+  "userId": "69",
+  "id": 101
+}
+
+What would you like to do?
+        1. Read a Post
+        2. Add a new Post
+        3. Update a Post
+        4. Delete a Post
+        5. Exit
+
+> Enter a number for your choice: 1
+> Enter the ID for the Post you want to read: 101
+Fetching Post ID 101...
+> ERROR: Status Code 404 - Post ID 101 not found. Please tryagain: What would you like to do?
+        1. Read a Post
+        2. Add a new Post
+        3. Update a Post
+        4. Delete a Post
+        5. Exit
+
+> Enter a number for your choice: 2
+> Enter an ID for the Post you want to add: 555
+> Enter Post title: Anal
+> Enter Post body: Butt Stuff
+> Enter your user ID: 80085
+Creating Post ID 555 with your input...
+INFO: Status Code 201 - Post ID 555 created successfully:
+{
+  "title": "Anal ",
+  "body": "Butt Stuff",
+  "userId": "80085",
+  "id": 101
+}
+
+What would you like to do?
+        1. Read a Post
+        2. Add a new Post
+        3. Update a Post
+        4. Delete a Post
+        5. Exit
+
+> Enter a number for your choice: 1
+> Enter the ID for the Post you want to read: 101
+Fetching Post ID 101...
+> ERROR: Status Code 404 - Post ID 101 not found. Please tryagain: What would you like to do?
+        1. Read a Post
+        2. Add a new Post
+        3. Update a Post
+        4. Delete a Post
+        5. Exit
+
+> Enter a number for your choice: 1
+> Enter the ID for the Post you want to read: 69
+Fetching Post ID 69...
+INFO: Status Code 200 - Post ID 69 fetched successfully:
+{
+  "userId": 7,
+  "id": 69,
+  "title": "fugiat quod pariatur odit minima",
+  "body": "officiis error culpa consequatur modi asperiores et\ndolorum assumenda voluptas et vel qui aut vel rerum\nvoluptatum quisquam perspiciatis quia rerum consequatur totam quas\nsequi commodi repudiandae asperiores et saepe a"
+}
+
+What would you like to do?
+        1. Read a Post
+        2. Add a new Post
+        3. Update a Post
+        4. Delete a Post
+        5. Exit
+
+> Enter a number for your choice: 4
+Enter the ID of the Post you want to delete: 69
+Deleting Post ID 69...
+INFO: Status Code 200 - Post deleted successfully.
+What would you like to do?
+        1. Read a Post
+        2. Add a new Post
+        3. Update a Post
+        4. Delete a Post
+        5. Exit
+
+> Enter a number for your choice: 1
+> Enter the ID for the Post you want to read: 69
+Fetching Post ID 69...
+INFO: Status Code 200 - Post ID 69 fetched successfully:
+{
+  "userId": 7,
+  "id": 69,
+  "title": "fugiat quod pariatur odit minima",
+  "body": "officiis error culpa consequatur modi asperiores et\ndolorum assumenda voluptas et vel qui aut vel rerum\nvoluptatum quisquam perspiciatis quia rerum consequatur totam quas\nsequi commodi repudiandae asperiores et saepe a"
+}
+
+What would you like to do?
+        1. Read a Post
+        2. Add a new Post
+        3. Update a Post
+        4. Delete a Post
+        5. Exit
+
+> Enter a number for your choice: 3
+> Enter the ID of the Post you want to update: 69
+> Would you like to view the existing post before you update? Enter "y" for "Yes" or "n" for "No": n
+Alright, living on the edge!
+> Enter new Post title: Anal Sex
+> Enter new Post body: Burger Finger
+> Enter your user ID: 420
+Updating Post ID 69 with your input...
+INFO: Status Code 200 - Post ID 69 updated successfully:
+{
+  "title": "Anal Sex",
+  "body": "Burger Finger",
+  "userId": "420",
+  "id": 69
+}
+
+What would you like to do?
+        1. Read a Post
+        2. Add a new Post
+        3. Update a Post
+        4. Delete a Post
+        5. Exit
+
+> Enter a number for your choice: 1
+> Enter the ID for the Post you want to read: 69
+Fetching Post ID 69...
+INFO: Status Code 200 - Post ID 69 fetched successfully:
+{
+  "userId": 7,
+  "id": 69,
+  "title": "fugiat quod pariatur odit minima",
+  "body": "officiis error culpa consequatur modi asperiores et\ndolorum assumenda voluptas et vel qui aut vel rerum\nvoluptatum quisquam perspiciatis quia rerum consequatur totam quas\nsequi commodi repudiandae asperiores et saepe a"
+}
+
+What would you like to do?
+        1. Read a Post
+        2. Add a new Post
+        3. Update a Post
+        4. Delete a Post
+        5. Exit
+
+> Enter a number for your choice:
