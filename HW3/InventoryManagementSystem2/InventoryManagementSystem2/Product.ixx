@@ -12,14 +12,14 @@ private:
 
 public:
 	// Cxs
-	Product() : name(""), category(""), quantity(0), price(0.0) {}
+	Product() : name(""), category(""), quantity(0), price(0.0) {}  // Dx cx
 	/*Product() {		// alt syntax
 		name = "";
 		category = "";
 		quantity = 0;
 		price = 0.0;
 	}*/
-	Product(const string& name, const string& category, int quantity, double price);
+	Product(const string& name, const string& category, int quantity, double price);	// Parameterized cx
 
 	// Getters
 	const string getName() const;
