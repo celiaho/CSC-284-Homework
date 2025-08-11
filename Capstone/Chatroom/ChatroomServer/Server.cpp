@@ -45,13 +45,40 @@ Commit and push everytime something works
 #include <string>
 #include <vector>
 #include <map>
+#include <mutex>
+#include <algorithm>   // for std::transform
+#include <cctype>      // for ::toupper
+#include <atomic>      // for anonymousCounter
 #pragma comment(lib, "ws2_32.lib")
 
-//// Users, Rooms,and the ChatServer itself, and add appropriate functionality to each.
+// ------------------ Function Prototypes ------------------
+/**
+ * @brief Removes a user from their current room.
+ * - Records lastRoom for messaging.
+ * - Broadcasts a departure announcement to the room.
+ * - Does not automatically add the user to a new room.
+ *
+ * @param clientSocket The socket of the user being removed.
+ */
+void removeUserFromRoom(SOCKET clientSocket);
+
+/**
+ * @brief Adds a user to the target room.
+ * - Updates currentRoom.
+ * - Broadcasts a join announcement to the room.
+ * - If lastRoom is set, sends "You left X and joined Y" to the user.
+ *
+ * @param clientSocket The socket of the user being added.
+ * @param targetRoom The name of the room to join.
+ */
+void addUserToRoom(SOCKET clientSocket, const std::string& targetRoom);
+
+//// Rooms,Users, and the ChatServer itself, and add appropriate functionality to each.
+// ------------------ Room Class ------------------
 class Room {
 public:
     std::string roomName;
-    std::vector<SOCKET> users;  // Vector to store the sockets of users in the room
+    std::vector<SOCKET> users;          // Vector to store the sockets of users in the room
 
     // Constructors for Room class
     Room() : roomName("") {}
@@ -77,37 +104,288 @@ public:
     void broadcastMessage(const std::string& msg, SOCKET senderSocket) {
         for (SOCKET userSocket : users) {       // Iterate through the vector of user sockets
             if (userSocket != senderSocket) {   // If the current socket is not the sender's socket
-                send(userSocket, msg.c_str(), msg.size(), 0);   // Send the message
+                send(userSocket, msg.c_str(), static_cast<int>(msg.size()), 0);   // Send the message
             }
         }
     }
 
     // Get the number of users in the room
-    int getUserCount() const {
-        return users.size();
-    }
+    int getUserCount() const { return users.size(); }
 
     // Get the room name
-    std::string getRoomName() const {
-        return roomName;
+    std::string getRoomName() const { return roomName; }
+};
+
+// ------------------ User Class ------------------
+class User {
+public:
+    std::string username;
+    SOCKET socket;
+    std::string currentRoom;
+    std::string lastRoom;
+
+    // Set users' default room to Lobby
+    User() : username("Anonymous"), socket(INVALID_SOCKET), currentRoom("Lobby") {}
+    User(const std::string& name, SOCKET sock)
+        : username(name), socket(sock), currentRoom("Lobby") {
     }
 };
 
-std::map<std::string, Room> rooms; // Global map to store rooms.
-//std::map<SOCKET, User> userMap; // Map to store user objects, key is the socket.
+// ------------------ Globals ------------------
+std::map<std::string, Room> rooms;      // Map to store rooms: roomName -> Room
+std::map<SOCKET, User> userMap;         // Map to store user objects, key is the socket: socket -> User
+std::mutex roomsMutex;                  // protect shared structures
 
-////user name, chatcommands kind of go here
+std::atomic<int> anonymousCounter{1};   // Thread-safe counter for generating anonymous usernames
+
+// ------------------ Username Assignment  ------------------
+/**
+ * @brief Assign a unique username, ensuring no duplicates (case-insensitive).
+ * If requestedName is empty, assigns "Anonymous<N>" where N increments.
+ * If the requested name is taken (case-insensitive), appends "_<N>" until unique.
+ *
+ * @param requestedName The name requested by the client (may be empty).
+ * @return A unique username string.
+ */
+std::string assignUniqueUsername(const std::string& requestedUsername) {
+    std::lock_guard<std::mutex> lock(roomsMutex);
+
+    // Base username for unique username check: Use client's requested username or "Anonymous" if client did not enter a username
+    std::string baseUsername = requestedUsername.empty() ? "Anonymous" : requestedUsername;
+    std::string finalUsername = baseUsername;
+
+    // If no name provided, assign Anonymous<N> immediately
+       if (requestedUsername.empty()) {
+        finalUsername += std::to_string(anonymousCounter++);
+    }
+
+    // Lambda to check if a name is already taken (case-insensitive)
+    auto isUsernameTaken = [&](const std::string& requestedUsernameCandidate) {    // requestedUsername with appended numbers if necessary
+        for (const auto& pair : userMap) {
+            // Compare existing username with the candidate username, ignoring case.
+            if (_stricmp(pair.second.username.c_str(), requestedUsernameCandidate.c_str()) == 0) {
+                return true;    // Found a match (ignoring case)
+            }
+        }
+        return false;   // No match found
+        };
+
+    // Append suffix until the name is unique
+    int suffix = 1;
+    while (isUsernameTaken(finalUsername)) {
+        finalUsername = baseUsername + "_" + std::to_string(suffix++);
+    }
+
+    return finalUsername;
+}
+
+// ------------------ Utility Helper Functions ------------------
+/**
+ * @brief Removes any trailing carriage return (\r) or newline (\n) characters from the end of a string.
+ */
+static inline std::string trimCRLF(std::string s) {
+    while (!s.empty() && (s.back() == '\r' || s.back() == '\n')) s.pop_back();
+    return s;
+}
+
+// ------------------ Room-Change Helpers ------------------
+/**
+ * @brief Removes a user from their current room.
+ * @param clientSocket The socket of the user being removed.
+ * @param sendConfirmation Whether to send a "You left X." message to the user.
+ */
+void removeUserFromRoom(SOCKET clientSocket, bool sendConfirmation = true) {
+    std::lock_guard<std::mutex> lock(roomsMutex);
+
+    User& user = userMap[clientSocket];
+    const std::string& lastRoom = user.currentRoom;
+
+    // Save the name of the room we're leaving
+    user.lastRoom = lastRoom;
+    Room& roomToLeave = rooms[user.currentRoom];
+
+    // Remove user from that room
+    roomToLeave.removeUser(clientSocket);
+
+    // Room announcement: Broadcast user departure to room
+    std::string departureAnnouncement = user.username + " has left the room.\n";
+    roomToLeave.broadcastMessage(departureAnnouncement, clientSocket);
+
+    // Optional user confirmation: Confirm departure with user
+    if (sendConfirmation) {
+        std::string departureConfirmation = "You left " + lastRoom + ".\n";
+        send(clientSocket, departureConfirmation.c_str(), static_cast<int>(departureConfirmation.size()), 0);
+    }
+}
+
+void addUserToRoom(SOCKET clientSocket, const std::string& roomName) {
+    std::lock_guard<std::mutex> lock(roomsMutex);
+
+    User& user = userMap[clientSocket];
+
+    // Add user to the new room and update currentRoom
+    Room& roomToJoin = rooms[roomName];
+    roomToJoin.addUser(clientSocket);
+    user.currentRoom = roomName;
+
+    // Room announcement: Broadcast user join to room
+    std::string joinAnnouncement = user.username + " has joined the room.\n";
+    roomToJoin.broadcastMessage(joinAnnouncement, clientSocket);
+
+    // User confirmation: Confirm join with user
+    std::string joinConfirmation = "You joined " + user.currentRoom + ".\n";
+    send(clientSocket, joinConfirmation.c_str(), static_cast<int>(joinConfirmation.size()), 0);
+}
+
+// ------------------ Command Functions ------------------
+void listRooms(SOCKET clientSocket) {
+    std::lock_guard<std::mutex> lock(roomsMutex);
+    std::string roomList = "Available rooms:\n";
+    for (auto& pair : rooms) {
+        roomList += pair.first + " (" + std::to_string(pair.second.getUserCount()) + " users)\n";
+    }
+    send(clientSocket, roomList.c_str(), static_cast<int>(roomList.size()), 0);
+}
+
+/**
+ * @brief Joins an existing room. If the room doesn't exist, notifies the user.
+ * @param clientSocket The socket of the user issuing /JOIN_ROOM.
+ * @param targetRoom   The name of the room to join.
+ */
+void joinRoom(SOCKET clientSocket, const std::string& roomName) {
+    const std::string& currentRoom = userMap[clientSocket].currentRoom;
+
+    // Check if given room name is empty
+    if (roomName.empty()) {
+        std::string emptyRoomNameMsg = "You must specify the room you want to join. The command syntax is: \"/JOIN_ROOM <room_name>\", e.g. \"/JOIN_ROOM New Room FTW\" (Do not include parentheses or arrow brackets). Try again.\n";
+        send(clientSocket, emptyRoomNameMsg.c_str(), static_cast<int>(emptyRoomNameMsg.size()), 0);
+        return;
+    }
+    // Check if already in room
+    if (currentRoom == roomName) {
+        std::string alreadyMsg = "You are already in " + roomName + ".\n";
+        send(clientSocket, alreadyMsg.c_str(), static_cast<int>(alreadyMsg.size()), 0);
+        return;
+    }
+    // Check that room exists before joining
+    if (!rooms.count(roomName)) {
+        std::string notFoundMsg = "\"" + roomName + "\" is not an existing room. To create and join it, type \"/CREATE_ROOM " + roomName + ".\n";
+        send(clientSocket, notFoundMsg.c_str(), static_cast<int>(notFoundMsg.size()), 0);
+        return;
+    }
+
+    // Move the user
+    removeUserFromRoom(clientSocket, true);
+    addUserToRoom(clientSocket, roomName);
+}
+
+/**
+ * @brief Moves the user from their current room into the lobby.
+ * - If the user is already in the lobby, sends a confirmation saying so.
+ * - Otherwise, removes them from the current room and adds them to the lobby.
+ *
+ * @param clientSocket The socket of the user issuing /LEAVE_ROOM.
+ */
+void leaveRoom(SOCKET clientSocket) {
+    const std::string& currentRoom = userMap[clientSocket].currentRoom;   // Get current room 
+
+    // If already in Lobby, just confirm to the user
+    if (currentRoom == "Lobby") {
+        std::string alreadyInLobbyNotice = "You are already in the lobby. If you want to leave the lobby and exit this program, type \"\/EXIT\".\n";
+        send(clientSocket, alreadyInLobbyNotice.c_str(), static_cast<int>(alreadyInLobbyNotice.size()), 0);
+        return;
+    }
+
+    // Move user to Lobby
+    removeUserFromRoom(clientSocket, true);
+    addUserToRoom(clientSocket, "Lobby");
+}
+
+/**
+ * @brief Creates a new room and moves the user into it.
+ * @param clientSocket The socket of the user issuing /CREATE_ROOM.
+ * @param newRoomName  The name of the room to create.
+ */
+void createRoomAndJoin(SOCKET clientSocket, const std::string& roomName) {
+    std::lock_guard<std::mutex> lock(roomsMutex);
+    
+    // Check if given room name is empty
+    if (roomName.empty()) {
+        std::string emptyRoomNameMsg = "You must specify the room you want to join. The command syntax is: \"/JOIN_ROOM <room_name>\", e.g. \"/JOIN_ROOM New Room FTW\" (Do not include parentheses or arrow brackets). Try again.\n";
+        send(clientSocket, emptyRoomNameMsg.c_str(), static_cast<int>(emptyRoomNameMsg.size()), 0);
+        return;
+    }
+    // Check if room already exists
+    if (rooms.count(roomName)) {
+        std::string roomExistsMsg = "The room \"" + roomName + "\" already exists. Use \"/JOIN_ROOM " + roomName + "\" (without quotation marks) to join it.\n";
+        send(clientSocket, roomExistsMsg.c_str(), static_cast<int>(roomExistsMsg.size()), 0);
+        return;
+    }
+
+    // Create room
+    rooms[roomName] = Room(roomName);
+
+    // New room announcement: Broadcast room creation to users in Lobby
+    std::string newRoomAnnouncement = "A new room was created: " + roomName + ".\n";
+    rooms["Lobby"].broadcastMessage(newRoomAnnouncement, clientSocket);
+
+    // Confirm new room creation with user
+    std::string newRoomConfirmation = "You created " + roomName + ".\n";
+    send(clientSocket, newRoomConfirmation.c_str(), static_cast<int>(newRoomConfirmation.size()), 0);
+
+    // Move the user to the new room
+    removeUserFromRoom(clientSocket, true);
+    addUserToRoom(clientSocket, roomName);
+}
+
+// checked
+void help(SOCKET clientSocket) {
+    std::string helpText =
+        "********** CHATTERVOX COMMANDS **********\n\n"
+        "Type \"/\" followed by the command and any necessary arguments. For example, to create a new chatroom, type \"/ CREATE_ROOM New Users\" (without the quotation marks).\n\n"
+        "/LIST_ROOMS\t\tDisplay a list of all chatrooms on the server and the number of users in each room.\n"
+        "/JOIN_ROOM <room name>\t\tMove to an existing chatroom.\n"
+        "/LEAVE_ROOM\t\tLeave the chatroom you're in and move to the lobby.\n"
+        "/CREATE_ROOM <room name>\tCreate a new chatroom and move to it.\n"
+        "/HELP\t\t\tDisplay this command menu.\n"
+        "/EXIT\t\t\tExit Chattervox.\n\n";
+    send(clientSocket, helpText.c_str(), static_cast<int>(helpText.size()), 0);
+}
+
+/**
+ * @brief Cleanly removes a user from the server and their current room.
+ * @param clientSocket The socket of the user exiting.
+ * @param sendGoodbye  If true, send a goodbye message to the user before removing them.
+ */void exit(SOCKET clientSocket, bool sendGoodbye = false) {
+    removeUserFromRoom(clientSocket, false); 
+
+    // Send goodbye message to user
+    {
+        std::lock_guard<std::mutex> lock(roomsMutex);
+
+        if (sendGoodbye) {
+            std::string exitMsg = "Goodbye, " + userMap[clientSocket].username + "—-visit again soon!\n";
+            send(clientSocket, exitMsg.c_str(), static_cast<int>(exitMsg.size()), 0);
+        }
+
+        // Remove user from userMap
+        userMap.erase(clientSocket);
+    }
+}
+
+// ------------------ Client Handler ------------------
 // Function to handle communication with a single client in a separate thread
 void handleClient(SOCKET clientSocket) {
     char buffer[1024];  // Buffer to store data received from the client
-    //ZeroMemory(buffer, sizeof(buffer)); // Clear buffer of leftover data
 
-    // At this point, a client has connected. The requirements suggest:
-    // - Creating a User object for this client (not yet implemented)
-    // - Adding the user to a general "lobby" or initial connection state (not yet implemented)
-        // create user
-        // connected to server
-        // add user to lobby
+    // On connection, create User & place user in Lobby
+    {
+        std::lock_guard<std::mutex> lock(roomsMutex);
+        userMap[clientSocket] = User("", clientSocket);    // Use empty username temporarily
+        rooms["Lobby"];     // Create Lobby if room does not exist (defensive guard)
+    }
+    //TODO
+    //addUserToRoom(clientSocket, "Lobby");   // Place user in Lobby
 
     while (true) {
         ZeroMemory(buffer, sizeof(buffer)); // Clear buffer of leftover data before each receive operation
@@ -115,43 +393,90 @@ void handleClient(SOCKET clientSocket) {
 
         if (bytesReceived > 0) {
             std::string msg(buffer, bytesReceived); // Convert received bytes to a string
-            std::cout << "Client says: " << msg << "\n";    // Print the message
+            msg = trimCRLF(msg);                    // Trim trailing characters
 
-            // Requirement: The server needs to parse this message to see if it's a command
-            // (CREATE_ROOM, JOIN_ROOM, LIST_ROOMS, EXIT) or a regular chat message.
-            // This parsing logic is not yet implemented.
+            // Check if message is a command
+            if (!msg.empty() && msg[0] == '/') {
+                // Split into command and argument
+                size_t spacePosition = msg.find(' ');
+                if (spacePosition != std::string::npos) { // If a space is found in the string
+                    std::string command = (spacePosition == std::string::npos) ? msg.substr(1) : msg.substr(1, spacePosition - 1); // chars after / and before space
+                    std::string argument = (spacePosition == std::string::npos) ? "" : msg.substr(spacePosition + 1); // chars after space
 
-            auto it = rooms.find("lobby");  // Find the "lobby" room in the rooms map
-            if (it != rooms.end()) {    // If the "lobby" room is found
-                Room& lobby = it->second;   // Get a reference to the "lobby" room object
-                lobby.broadcastMessage(msg, clientSocket);  // Broadcast the message to all users
+                    // Capitalize command
+                    std::transform(command.begin(), command.end(), command.begin(), ::toupper);
+
+                    // Handle commands
+                    if (command == "LIST_ROOMS") {
+                        listRooms(clientSocket);
+                    }
+                    else if (command == "JOIN_ROOM") {
+                        joinRoom(clientSocket, argument);
+                    }
+                    else if (command == "LEAVE_ROOM") {
+                        leaveRoom(clientSocket);
+                    }
+                    else if (command == "CREATE_ROOM") {
+                        createRoomAndJoin(clientSocket, argument);
+                    }
+                    else if (command == "HELP") {
+                        help(clientSocket);
+                    }
+                    else if (command == "EXIT") {
+                        exit(clientSocket, true);
+                        break; // Leave loop to close socket/disconnect user
+                    }
+                    else {
+                        const std::string unknownCommandMsg = "Unknown command. Try \"/HELP\" (without the quotation marks).\n";
+                        send(clientSocket, unknownCommandMsg.c_str(), static_cast<int>(unknownCommandMsg.size()), 0);
+                    }
+                } else {
+                    // Regular chat message--broadcast to current room
+                    std::string currentRoom, username, chatLine;
+                    {
+                        std::lock_guard<std::mutex> lock(roomsMutex);
+                        if (!userMap.count(clientSocket)) continue;
+                        currentRoom = userMap[clientSocket].currentRoom;
+                        username = userMap[clientSocket].username;
+                    }
+                    chatLine = username + ": " + msg + "\n";
+                    {
+                        std::lock_guard<std::mutex> lock(roomsMutex);
+                        if (rooms.count(currentRoom)) {
+                            rooms[currentRoom].broadcastMessage(chatLine, clientSocket);
+                        }
+                    }
+                }
+            } else if (bytesReceived == 0) {    // Connection was closed by the client
+                exit(clientSocket, false);
+                break;  // Exit the receive loop for this client
+            } else {
+                // Notify user that error occurred while receiving data & display error code
+                std::cerr << "Error occurred while receiving data: " << WSAGetLastError() << "\n";
+                exit(clientSocket, false);
+                break;  // Exit the receive loop for this client
             }
         }
-        else if (bytesReceived == 0) {
-            std::cout << "Client disconnected gracefully.\n";   // Client closed the connection
-            // Remove the user from the lobby upon disconnection
-            auto it = rooms.find("lobby");  // Find the "lobby" room in the rooms map
-            if (it != rooms.end()) {    // If the "lobby" room is found
-                Room& lobby = it->second;
-                lobby.removeUser(clientSocket); // Remove the user from the lobby
-                std::string leaveNotice = "User left the room.\n"; // Create departure notice
-                lobby.broadcastMessage(leaveNotice, clientSocket);  // Notify users
-            }
-            break;  // Exit the loop for this client
-        } else {
-            // Notify user that error occurred while receiving data & display error code
-            std::cerr << "Error occurred while receiving data: " << WSAGetLastError() << "\n";  // recv failed with error
-            break;  // Exit the loop for this client
-        }
+
+        // Cleanup on disconnect
+        closesocket(clientSocket);  // Close the socket associated with this client
     }
 
-    closesocket(clientSocket);  // Close the socket associated with this client
-    // Requirement: When a client disconnects, the server should:
-    // - Remove the user from any room they were in (not yet implemented)
-    // - Notify other users in the room (not yet implemented)
+    //// Update /SET_USERNAME handling - I DON'T THINK THIS GOES HERE
+    /*else if (command == "SET_USERNAME") {
+        std::string uniqueName = assignUniqueUsername(argument);
+        {
+            std::lock_guard<std::mutex> lock(roomsMutex);
+            userMap[clientSocket].username = uniqueName;
+        }
+
+        std::string confirmation = "Your username is set to: " + uniqueName + "\n";
+        send(clientSocket, confirmation.c_str(), confirmation.size(), 0);
+        }*/
 }
 
 
+// ------------------ Main ------------------
 int main(int argc, char* argv[]) {
     WSADATA wsaData;    // Structure for Windows Sockets startup info
     SOCKET serverSocket = INVALID_SOCKET, clientSocket = INVALID_SOCKET; // Socket handles initialized with INVALID_SOCKET upon declaration
@@ -172,7 +497,7 @@ int main(int argc, char* argv[]) {
         WSACleanup();
         return 1;
     } else {
-        std::cout << "----------WELCOME TO CELIA'S CHATROOM SERVER ----------\n"
+        std::cout << "----------WELCOME TO THE CHATTERVOX CHATROOM SERVER ----------\n"
             << "Socket for network communication created successfully.\n";
     }
 
@@ -207,23 +532,23 @@ int main(int argc, char* argv[]) {
     }
 
     // Listen for incoming connections
-    listen(serverSocket, SOMAXCONN);    // SOMAXCONN: Maximum length of the pending connection queue
+    listen(serverSocket, SOMAXCONN);    // SOMAXCONN: Max length of the pending connection queue
     std::cout << "Server listening on port " << serverPort << "...\n";
 
     // Create the "lobby" room
-    rooms["lobby"] = Room("lobby"); // Add to the rooms map
+    rooms["Lobby"] = Room("Lobby"); // Add to the rooms map
 
     // Main loop/thread to accept incoming client connections
     while (true) {
         SOCKET clientSocket = accept(serverSocket, nullptr, nullptr);    // Accept a connection
         if (clientSocket != INVALID_SOCKET) {   // If a connection is accepted successfully
             std::cout << "Client connected.\n";
-            rooms["lobby"].addUser(clientSocket);   // add new user to the lobby
-            // create a new thread to handle communication with the newly connected client
+            rooms["Lobby"].addUser(clientSocket);   // Add new user to the lobby
+            // Create a new thread to handle communication with the newly connected client
             std::thread clientThread(handleClient, clientSocket);
             clientThread.detach(); // Detach thread so it runs independently in bg
         }
-        // clientSocket is closed in handleClient thread
+        // ClientSocket is closed in handleClient thread
     }
 
     // Cleanup
