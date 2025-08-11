@@ -290,7 +290,11 @@ void listRooms(SOCKET clientSocket) {
  * @param targetRoom   The name of the room to join.
  */
 void joinRoom(SOCKET clientSocket, const std::string& roomName) {
-    const std::string& currentRoom = userMap[clientSocket].currentRoom;
+    std::string currentRoom;
+    {
+        std::lock_guard<std::mutex> lock(roomsMutex);
+        currentRoom = userMap[clientSocket].currentRoom;
+    }
 
     // Check if given room name is empty
     if (roomName.empty()) {
@@ -324,7 +328,11 @@ void joinRoom(SOCKET clientSocket, const std::string& roomName) {
  * @param clientSocket The socket of the user issuing /LEAVE_ROOM.
  */
 void leaveRoom(SOCKET clientSocket) {
-    const std::string& currentRoom = userMap[clientSocket].currentRoom;   // Get current room 
+    std::string currentRoom;
+    {
+        std::lock_guard<std::mutex> lock(roomsMutex);
+        currentRoom = userMap[clientSocket].currentRoom;
+    }
 
     // If already in Lobby, just confirm to the user
     if (currentRoom == "Lobby") {
