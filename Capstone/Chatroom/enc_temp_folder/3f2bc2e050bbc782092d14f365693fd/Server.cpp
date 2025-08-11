@@ -348,7 +348,9 @@ void leaveRoom(SOCKET clientSocket) {
  * @param clientSocket The socket of the user issuing /CREATE_ROOM.
  * @param newRoomName  The name of the room to create.
  */
-void createRoomAndJoin(SOCKET clientSocket, const std::string& roomName) {    
+void createRoomAndJoin(SOCKET clientSocket, const std::string& roomName) {
+    std::lock_guard<std::mutex> lock(roomsMutex);
+    
     // Check if given room name is empty
     if (roomName.empty()) {
         std::string emptyRoomNameMsg = "You must specify the room you want to join. The command syntax is: \"/CREATE_ROOM <room_name>\", e.g. \"/CREATE_ROOM New Room FTW\" (Do not include parentheses or arrow brackets). Try again.\n";
@@ -363,10 +365,7 @@ void createRoomAndJoin(SOCKET clientSocket, const std::string& roomName) {
     }
 
     // Create room
-    {
-        std::lock_guard<std::mutex> lock(roomsMutex);
-        rooms[roomName] = Room(roomName);
-    }
+    rooms[roomName] = Room(roomName);
 
     // New room announcement: Broadcast room creation to users in Lobby
     std::string newRoomAnnouncement = "A new room was created: " + roomName + ".\n";

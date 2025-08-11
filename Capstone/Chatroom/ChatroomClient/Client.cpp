@@ -66,22 +66,49 @@ int main(int argc, char *argv[]) {
         std::cerr << "Socket creation failed.\n";
         WSACleanup();
         return 1;
-    }
- else {
+    } else {
         std::cout << "Socket for network communication created successfully.\n";
     }
 
-    // Check for correct number of arguments
-    if (argc != 3) {
-        std::cerr << "Usage: chatroom_client <server_ip_address> <server_port_number>\n";
-        closesocket(clientSock);
-        WSACleanup;
-        return 1;
+    // Get server IP and port
+    std::string serverIP;
+    int serverPort = 0;
+
+    if (argc == 3) {
+        // Use command-line arguments
+        serverIP = argv[1];
+        serverPort = std::stoi(argv[2]);
+    } else {
+        // Use interactive prompt for IP and port
+        std::cout << "Enter server IP address (e.g., 127.0.0.1): ";
+        std::getline(std::cin, serverIP);
+
+        std::cout << "Enter server port number (e.g., 54000): ";
+        std::string portStr;
+        std::getline(std::cin, portStr);
+        try {
+            serverPort = std::stoi(portStr);
+        }
+        catch (...) {
+            std::cerr << "Invalid port number format.\n";
+            closesocket(clientSock);
+            WSACleanup();
+            return 1;
+        }
     }
 
-    // Get IP and port from command line
-    std::string serverIP = argv[1];
-    int serverPort = atoi(argv[2]);
+    //TODO Replace below code with above for user-friendliness
+    //// Check for correct number of arguments
+    //if (argc != 3) {
+    //    std::cerr << "Usage: chatroom_client <server_ip_address> <server_port_number>\n";
+    //    closesocket(clientSock);
+    //    WSACleanup;
+    //    return 1;
+    //}
+
+    //// Get IP and port from command line
+    //std::string serverIP = argv[1];
+    //int serverPort = atoi(argv[2]);
 
     // Validate port number
     if (serverPort <= 0 || serverPort > 65535) {
@@ -102,43 +129,49 @@ int main(int argc, char *argv[]) {
         closesocket(clientSock);
         WSACleanup();
         return 1;
-    } else {
+    } else 
+        // ---------- WELCOME TO CHATTERVOX ----------
         // Confirm that client is connected to the server
         std::cout << "Connected to chatroom server at IP " << serverIP << " and port number " << serverPort << ".\n"
             << "\n"
             << "---------- WELCOME TO CHATTERVOX ----------\n";
          
         // Username prompt
-        std::string username;
-        std::cout << "Enter username (Press Enter for Anonymous): ";
-        std::getline(std::cin, username);
-        static int anonId = 1;
-        if (username.empty()) {
-            // Send an empty name if user pressed Enter
-            std::string setUsernameCmd = "/SET_USERNAME";
-            send(clientSock, setUsernameCmd.c_str(), setUsernameCmd.size(), 0);
-        }
-        else {
-            std::string setUsernameCmd = "/SET_USERNAME " + username;
-            send(clientSock, setUsernameCmd.c_str(), setUsernameCmd.size(), 0);
+        std::string requestedUsername;
+        std::cout << "Enter username (Press Enter for an anonymous ID): ";
+        std::getline(std::cin, requestedUsername);
+
+        // Send "USERNAME:<raw>\n" to server
+        {
+            std::string hello = "USERNAME:" + requestedUsername + "\n";
+            send(clientSock, hello.c_str(), static_cast<int>(hello.size()), 0);
         }
 
-        // Wait for confirmation from server before showing welcome text
-        char nameBuffer[1024];
+        // Wait for server confirmation: "USERNAME_CONFIRMED:<final>\n"
+        char nameBuffer[256];
         ZeroMemory(nameBuffer, sizeof(nameBuffer));
         int nameBytes = recv(clientSock, nameBuffer, sizeof(nameBuffer), 0);
+        std::string username;   // This is the final username
         if (nameBytes > 0) {
             std::string confirmation(nameBuffer, nameBytes);
-            std::cout << confirmation; // Server sends "Your username is set to: X\n"
+            const std::string tag = "USERNAME_CONFIRMED:";
+            if (confirmation.rfind(tag, 0) == 0) {
+                username = confirmation.substr(tag.size());
+                // trim CRLF
+                while (!username.empty() && (username.back() == '\r' || username.back() == '\n'))
+                    username.pop_back();
+            }
         }
 
+        // Confirm official username
+        std::cout << "Your username is: " << username << ".\n\n";
 
         // Welcome message
         std::cout << "Hello, " << username << ". You can explore Chattervox with the following commands. Simply type \"/\" followed by the command and any necessary arguments. For example, to create a new chatroom, type \"/CREATE_ROOM New Users\" (without the quotation marks).\n"
             << "\n"
             << "********** CHATTERVOX COMMANDS **********\n\n"
             << "LIST_ROOMS\t\tDisplay a list of all chatrooms on the server and the number of users in each room.\n"
-            << "JOIN_ROOM <room name>\t\tMove to an existing chatroom.\n"
+            << "JOIN_ROOM <room name>\tMove to an existing chatroom.\n"
             << "LEAVE_ROOM\t\tLeave the chatroom you're in and move to the lobby.\n"
             << "CREATE_ROOM <room name>\tCreate a new chatroom and move to it.\n"
             << "HELP\t\t\tDisplay this command menu.\n"
@@ -157,15 +190,21 @@ int main(int argc, char *argv[]) {
         std::cout << "> ";// Prompt the user for input
         std::getline(std::cin, input); // Read a line of text from the user's input
 
-        // Requirement: The client needs to recognize and handle commands
-        // (CREATE_ROOM, JOIN_ROOM, LIST_ROOMS, EXIT) entered by the user.
-        // Currently, it treats all input as a message to be sent.
+        //if (input == "/EXIT") {
+        //    send(clientSock, input.c_str(), input.size(), 0);   // Send the user's input to the server
+        //    break;  // Exit the sending loop if the user types "exit"
+        //}
+        //send(clientSock, input.c_str(), input.size(), 0);   // Send all other user input to the server
 
         if (input == "/EXIT") {
-            send(clientSock, input.c_str(), input.size(), 0);   // Send the user's input to the server
-            break;  // Exit the sending loop if the user types "exit"
+            std::string exitMsg = input + "\n";  // Add newline for consistent command parsing
+            send(clientSock, exitMsg.c_str(), static_cast<int>(exitMsg.size()), 0);
+            break;  // Exit the sending loop if the user types /EXIT
         }
-        send(clientSock, input.c_str(), input.size(), 0);   // Send all other user input to the server
+
+        // For all other input, also append newline for consistency
+        std::string sendMsg = input + "\n";
+        send(clientSock, sendMsg.c_str(), static_cast<int>(sendMsg.size()), 0);
     }
 
     // Cleanup
