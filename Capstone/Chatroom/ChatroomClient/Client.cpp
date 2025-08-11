@@ -68,8 +68,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
  else {
-        std::cout << "---------- WELCOME TO YOUR CLIENT ----------\n"
-            << "Socket for network communication created successfully.\n";
+        std::cout << "Socket for network communication created successfully.\n";
     }
 
     // Check for correct number of arguments
@@ -104,8 +103,49 @@ int main(int argc, char *argv[]) {
         WSACleanup();
         return 1;
     } else {
-        std::cout << "Connected to chatroom server at IP " << serverIP << " and port number " << serverPort << ". Type messages or 'exit' to quit.\n";
-    }
+        // Confirm that client is connected to the server
+        std::cout << "Connected to chatroom server at IP " << serverIP << " and port number " << serverPort << ".\n"
+            << "\n"
+            << "---------- WELCOME TO CHATTERVOX ----------\n";
+         
+        // Username prompt
+        std::string username;
+        std::cout << "Enter username (Press Enter for Anonymous): ";
+        std::getline(std::cin, username);
+        static int anonId = 1;
+        if (username.empty()) {
+            // Send an empty name if user pressed Enter
+            std::string setUsernameCmd = "/SET_USERNAME";
+            send(clientSock, setUsernameCmd.c_str(), setUsernameCmd.size(), 0);
+        }
+        else {
+            std::string setUsernameCmd = "/SET_USERNAME " + username;
+            send(clientSock, setUsernameCmd.c_str(), setUsernameCmd.size(), 0);
+        }
+
+        // Wait for confirmation from server before showing welcome text
+        char nameBuffer[1024];
+        ZeroMemory(nameBuffer, sizeof(nameBuffer));
+        int nameBytes = recv(clientSock, nameBuffer, sizeof(nameBuffer), 0);
+        if (nameBytes > 0) {
+            std::string confirmation(nameBuffer, nameBytes);
+            std::cout << confirmation; // Server sends "Your username is set to: X\n"
+        }
+
+
+        // Welcome message
+        std::cout << "Hello, " << username << ". You can explore Chattervox with the following commands. Simply type \"/\" followed by the command and any necessary arguments. For example, to create a new chatroom, type \"/CREATE_ROOM New Users\" (without the quotation marks).\n"
+            << "\n"
+            << "********** CHATTERVOX COMMANDS **********\n\n"
+            << "LIST_ROOMS\t\tDisplay a list of all chatrooms on the server and the number of users in each room.\n"
+            << "JOIN_ROOM <room name>\t\tMove to an existing chatroom.\n"
+            << "LEAVE_ROOM\t\tLeave the chatroom you're in and move to the lobby.\n"
+            << "CREATE_ROOM <room name>\tCreate a new chatroom and move to it.\n"
+            << "HELP\t\t\tDisplay this command menu.\n"
+            << "EXIT\t\t\tExit Chattervox.\n"\
+            << "*****************************************\n"
+            << "\n"
+            << "You are in the lobby. Type messages to chat or type a command to navigate Chattervox.\n\n";
 
     // Start the receiving thread
     std::thread receiver(receiveMessages, clientSock);
@@ -116,13 +156,16 @@ int main(int argc, char *argv[]) {
     while (true) {
         std::cout << "> ";// Prompt the user for input
         std::getline(std::cin, input); // Read a line of text from the user's input
-        
+
         // Requirement: The client needs to recognize and handle commands
         // (CREATE_ROOM, JOIN_ROOM, LIST_ROOMS, EXIT) entered by the user.
         // Currently, it treats all input as a message to be sent.
 
-        if (input == "exit") break; // Exit the sending loop if the user types "exit"
-        send(clientSock, input.c_str(), input.size(), 0);// Send the user's input to the server
+        if (input == "/EXIT") {
+            send(clientSock, input.c_str(), input.size(), 0);   // Send the user's input to the server
+            break;  // Exit the sending loop if the user types "exit"
+        }
+        send(clientSock, input.c_str(), input.size(), 0);   // Send all other user input to the server
     }
 
     // Cleanup
